@@ -134,38 +134,51 @@ TEST_F(CallbacksCapturesTest, BasicCapture)
     EXPECT_EQ(5, capture->length());
 }
 
-TEST_F(CallbacksCapturesTest, MultipleCaptures)
-{
+TEST_F(CallbacksCapturesTest, MultipleCaptures) {
     auto fsm = FSM::Builder("multi_capture")
-                   .addState("START", StateType::START)
-                   .addState("LETTERS")
-                   .addState("DIGITS")
-                   .addState("ACCEPT", StateType::ACCEPT)
-                   .setStartState("START")
-                   .addAcceptState("ACCEPT")
-                   .onStateEntry("LETTERS", [](const StateContext &ctx)
-                                 { static_cast<FSM *>(ctx.user_data)->beginCapture("letters"); })
-                   .onStateExit("LETTERS", [](const StateContext &ctx)
-                                { static_cast<FSM *>(ctx.user_data)->endCapture("letters"); })
-                   .onStateEntry("DIGITS", [](const StateContext &ctx)
-                                 { static_cast<FSM *>(ctx.user_data)->beginCapture("digits"); })
-                   .onStateExit("DIGITS", [](const StateContext &ctx)
-                                { static_cast<FSM *>(ctx.user_data)->endCapture("digits"); })
-                   .addTransition("START", "LETTERS", ABNF::alpha())
-                   .addTransition("LETTERS", "LETTERS", ABNF::alpha())
-                   .addEpsilonTransition("LETTERS", "DIGITS")
-                   .addTransition("DIGITS", "DIGITS", ABNF::digit())
-                   .addEpsilonTransition("DIGITS", "ACCEPT")
-                   .build();
+        .addState("START", StateType::START)
+        .addState("LETTERS")
+        .addState("DIGITS")
+        .addState("ACCEPT", StateType::ACCEPT)
+        .setStartState("START")
+        .addAcceptState("ACCEPT")
+        // Letters capture
+        .onStateEntry("LETTERS", [](const StateContext& ctx) {
+            auto* f = static_cast<FSM*>(ctx.user_data);
+            f->beginCapture("letters");
+        })
+        .addTransition("START", "LETTERS", ABNF::alpha())
+        .addTransition("LETTERS", "LETTERS", ABNF::alpha())
+        // Transition to DIGITS on first digit - this ends letters and starts digits
+        .addTransition("LETTERS", "DIGITS", ABNF::digit())
+        .onStateExit("LETTERS", [](const StateContext& ctx) {
+            auto* f = static_cast<FSM*>(ctx. user_data);
+            f->endCapture("letters");
+        })
+        // Digits capture
+        .onStateEntry("DIGITS", [](const StateContext& ctx) {
+            auto* f = static_cast<FSM*>(ctx.user_data);
+            f->beginCapture("digits");
+        })
+        . addTransition("DIGITS", "DIGITS", ABNF::digit())
+        .onStateExit("DIGITS", [](const StateContext& ctx) {
+            auto* f = static_cast<FSM*>(ctx. user_data);
+            f->endCapture("digits");
+        })
+        . addEpsilonTransition("DIGITS", "ACCEPT")
+        .build();
 
-    fsm->setUserData(fsm.get());
-    fsm->validate("abc123");
-
+    fsm->setUserData(fsm. get());
+    
+    bool result = fsm->validate("abc123");
+    
+    EXPECT_TRUE(result) << "Validation failed";
+    
     auto letters = fsm->getCapture("letters");
     auto digits = fsm->getCapture("digits");
-
-    ASSERT_TRUE(letters.has_value());
-    ASSERT_TRUE(digits.has_value());
+    
+    ASSERT_TRUE(letters.has_value()) << "Letters capture missing";
+    ASSERT_TRUE(digits.has_value()) << "Digits capture missing";
     EXPECT_EQ("abc", letters->value);
     EXPECT_EQ("123", digits->value);
 }
