@@ -3,6 +3,9 @@ set(This FsmTests)
 
 set(Sources
     src/fsm.test.cpp
+    src/streaming.test.cpp
+    src/backtracking.test.cpp
+    src/actions.test.cpp
 )
 
 add_executable(${This} ${Sources})
@@ -15,6 +18,7 @@ target_include_directories(${This} PRIVATE ..)
 target_link_libraries(${This} PUBLIC
     gtest_main
     Fsm
+    Abnf
 )
 
 add_test(

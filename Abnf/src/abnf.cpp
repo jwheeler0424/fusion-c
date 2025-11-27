@@ -2,7 +2,7 @@
 #include <sstream>
 #include <iomanip>
 
-namespace fsm {
+namespace abnf {
 
 // ============================================================================
 // Constructors
@@ -11,13 +11,14 @@ namespace fsm {
 ABNF::ABNF() : char_set_(), description_("EMPTY") {}
 
 ABNF::ABNF(char ch) : char_set_(), description_() {
-    setBit(static_cast<uint8_t>(ch));
+    setBit(static_cast<uint8_t>(static_cast<unsigned char>(ch)));
     std::ostringstream oss;
-    if (ch >= 0x20 && ch <= 0x7E && ch != '\'') {
+    unsigned char uch = static_cast<unsigned char>(ch);
+    if (uch >= 0x20 && uch <= 0x7E && uch != '\'') {
         oss << "'" << ch << "'";
     } else {
         oss << "%x" << std::hex << std::uppercase << std::setw(2) 
-            << std::setfill('0') << static_cast<int>(static_cast<uint8_t>(ch));
+            << std::setfill('0') << static_cast<int>(uch);
     }
     description_ = oss.str();
 }
@@ -31,16 +32,18 @@ ABNF::ABNF(uint8_t value) : char_set_(), description_() {
 }
 
 ABNF::ABNF(char start, char end) : char_set_(), description_() {
-    if (start > end) {
+    unsigned char ustart = static_cast<unsigned char>(start);
+    unsigned char uend = static_cast<unsigned char>(end);
+    if (ustart > uend) {
         throw std::invalid_argument("ABNF range: start must be <= end");
     }
-    setRange(static_cast<uint8_t>(start), static_cast<uint8_t>(end));
+    setRange(static_cast<uint8_t>(ustart), static_cast<uint8_t>(uend));
     
     std::ostringstream oss;
     oss << "%x" << std::hex << std::uppercase << std::setw(2) 
-        << std::setfill('0') << static_cast<int>(static_cast<uint8_t>(start))
+        << std::setfill('0') << static_cast<int>(ustart)
         << "-" << std::setw(2) << std::setfill('0') 
-        << static_cast<int>(static_cast<uint8_t>(end));
+        << static_cast<int>(uend);
     description_ = oss.str();
 }
 
@@ -67,13 +70,14 @@ ABNF::ABNF(std::initializer_list<char> chars) : char_set_(), description_() {
     oss << "[";
     bool first = true;
     for (char ch : chars) {
-        setBit(static_cast<uint8_t>(ch));
+        setBit(static_cast<uint8_t>(static_cast<unsigned char>(ch)));
         if (!first) oss << ", ";
-        if (ch >= 0x20 && ch <= 0x7E && ch != '\'') {
+        unsigned char uch = static_cast<unsigned char>(ch);
+        if (uch >= 0x20 && uch <= 0x7E && uch != '\'') {
             oss << "'" << ch << "'";
         } else {
             oss << "%x" << std::hex << std::uppercase << std::setw(2) 
-                << std::setfill('0') << static_cast<int>(static_cast<uint8_t>(ch));
+                << std::setfill('0') << static_cast<int>(uch);
         }
         first = false;
     }
@@ -131,34 +135,6 @@ ABNF& ABNF::operator=(ABNF&& other) noexcept {
         description_ = std::move(other.description_);
     }
     return *this;
-}
-
-// ============================================================================
-// Matching Operations
-// ============================================================================
-
-bool ABNF::matches(char ch) const noexcept {
-    return char_set_[static_cast<uint8_t>(ch)];
-}
-
-bool ABNF::matches(uint8_t value) const noexcept {
-    return char_set_[value];
-}
-
-bool ABNF::excludes(char ch) const noexcept {
-    return !matches(ch);
-}
-
-bool ABNF::excludes(uint8_t value) const noexcept {
-    return !matches(value);
-}
-
-bool ABNF::operator()(char ch) const noexcept {
-    return matches(ch);
-}
-
-bool ABNF::operator()(uint8_t value) const noexcept {
-    return matches(value);
 }
 
 // ============================================================================
@@ -421,7 +397,7 @@ std::string ABNF::coreRuleToString(CoreRule rule) {
 // ============================================================================
 
 ABNF::Builder& ABNF::Builder::addChar(char ch) {
-    abnf_.setBit(static_cast<uint8_t>(ch));
+    abnf_.setBit(static_cast<uint8_t>(static_cast<unsigned char>(ch)));
     return *this;
 }
 
@@ -431,10 +407,12 @@ ABNF::Builder& ABNF::Builder::addChar(uint8_t value) {
 }
 
 ABNF::Builder& ABNF::Builder::addRange(char start, char end) {
-    if (start > end) {
+    unsigned char ustart = static_cast<unsigned char>(start);
+    unsigned char uend = static_cast<unsigned char>(end);
+    if (ustart > uend) {
         throw std::invalid_argument("Builder::addRange: start must be <= end");
     }
-    abnf_.setRange(static_cast<uint8_t>(start), static_cast<uint8_t>(end));
+    abnf_.setRange(static_cast<uint8_t>(ustart), static_cast<uint8_t>(uend));
     return *this;
 }
 
@@ -461,4 +439,4 @@ ABNF ABNF::Builder::build() const {
     return abnf_;
 }
 
-} // namespace fsm
+} // namespace abnf

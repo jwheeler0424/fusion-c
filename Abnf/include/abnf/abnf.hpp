@@ -8,10 +8,11 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
-namespace fsm {
+namespace abnf {
 
 /**
  * @brief ABNF (Augmented Backus-Naur Form) class implementing RFC2234 grammar notation
@@ -141,46 +142,37 @@ public:
     // ========================================================================
 
     /**
-     * @brief Check if a character matches this ABNF rule
-     * @param ch The character to test
-     * @return true if the character matches, false otherwise
-     */
-    [[nodiscard]] bool matches(char ch) const noexcept;
-
-    /**
-     * @brief Check if a byte value matches this ABNF rule
-     * @param value The byte value to test
+     * @brief Check if a value matches this ABNF rule
+     * @param value The value to test (char, uint8_t, or other integral type)
      * @return true if the value matches, false otherwise
      */
-    [[nodiscard]] bool matches(uint8_t value) const noexcept;
+    template<typename T>
+    [[nodiscard]] typename std::enable_if<std::is_integral<T>::value, bool>::type
+    matches(T value) const noexcept {
+        return char_set_[static_cast<uint8_t>(static_cast<unsigned char>(value))];
+    }
 
     /**
-     * @brief Check if a character is explicitly excluded from this ABNF rule
-     * @param ch The character to test
-     * @return true if the character does not match, false if it matches
-     */
-    [[nodiscard]] bool excludes(char ch) const noexcept;
-
-    /**
-     * @brief Check if a byte value is explicitly excluded from this ABNF rule
-     * @param value The byte value to test
+     * @brief Check if a value is explicitly excluded from this ABNF rule
+     * @param value The value to test (char, uint8_t, or other integral type)
      * @return true if the value does not match, false if it matches
      */
-    [[nodiscard]] bool excludes(uint8_t value) const noexcept;
+    template<typename T>
+    [[nodiscard]] typename std::enable_if<std::is_integral<T>::value, bool>::type
+    excludes(T value) const noexcept {
+        return !matches(value);
+    }
 
     /**
      * @brief Operator overload for match testing
-     * @param ch The character to test
-     * @return true if the character matches, false otherwise
-     */
-    [[nodiscard]] bool operator()(char ch) const noexcept;
-
-    /**
-     * @brief Operator overload for match testing
-     * @param value The byte value to test
+     * @param value The value to test (char, uint8_t, or other integral type)
      * @return true if the value matches, false otherwise
      */
-    [[nodiscard]] bool operator()(uint8_t value) const noexcept;
+    template<typename T>
+    [[nodiscard]] typename std::enable_if<std::is_integral<T>::value, bool>::type
+    operator()(T value) const noexcept {
+        return matches(value);
+    }
 
     // ========================================================================
     // Set Operations
@@ -242,6 +234,29 @@ public:
      * @return String description of the rule
      */
     [[nodiscard]] std::string toString() const;
+
+    static ABNF fromString(const std::string& str) {
+        // Simple parser for string representations (not fully featured)
+        ABNF abnf;
+        abnf.clear();
+        for (char ch : str) {
+            abnf.setBit(static_cast<uint8_t>(static_cast<unsigned char>(ch)));
+        }
+        return abnf;
+    }
+    static ABNF literal(char ch) {
+        return ABNF(ch);
+    }
+    static ABNF literal(const std::string& str) {
+        ABNF abnf;
+        for (char ch : str) {
+            abnf = abnf | ABNF(ch);
+        }
+        return abnf;
+    }
+    static ABNF range(char start, char end) {
+        return ABNF(start, end);
+    }
 
     // ========================================================================
     // Factory Methods for Core Rules
@@ -319,6 +334,6 @@ private:
     ABNF abnf_;
 };
 
-} // namespace fsm
+} // namespace abnf
 
 #endif // ABNF_HPP
