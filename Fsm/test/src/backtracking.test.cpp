@@ -307,7 +307,7 @@ TEST_F(BacktrackingTest, RealWorld_EmailLocalPart)
                    .addTransition("START", "CHARS1", ABNF::alpha())
                    .addTransition("CHARS1", "CHARS1", ABNF::alpha())
                    .addTransition("CHARS1", "ACCEPT", ABNF::literal('@'))
-                   .addTransition("CHARS1", "CHARS2", ABNF::literal('. '))
+                   .addTransition("CHARS1", "CHARS2", ABNF::literal('.'))
                    .addTransition("CHARS2", "CHARS2", ABNF::alpha())
                    .addTransition("CHARS2", "ACCEPT", ABNF::literal('@'))
                    .build();
